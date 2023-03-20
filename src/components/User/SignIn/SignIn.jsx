@@ -1,72 +1,107 @@
-import React from 'react'
+import React, { useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
-import { Link, Redirect } from 'react-router-dom'
+import { useDispatch, useSelector } from 'react-redux'
+import classNames from 'classnames'
 
-import { doLogin, useAuthDispatch, useAuthState } from '../../../context/authContext'
-import classes from './SignIn.module.scss'
+import { registerUser } from '../../../services/blogService'
+import { setErrors } from '../../../store/slices/user-slice'
+import signUp from '../SignUp/SignUp.module.scss'
+import { setSubmit } from '../../../store/slices/status-slice'
+
+import styles from './SignIn.module.scss'
 
 function SignIn() {
   const {
     register,
-    handleSubmit,
     formState: { errors },
+    handleSubmit,
+    setValue,
+    watch,
   } = useForm()
 
-  const { user: loggedUser } = useAuthState()
-  const dispatch = useAuthDispatch()
-  if (loggedUser) return <Redirect to="/" />
+  const servErr = useSelector((state) => state.user.errors)
 
-  const onSubmit = (userData) => {
-    doLogin(dispatch, userData)
+  const dispatch = useDispatch()
+
+  const onSubmit = (data) => {
+    dispatch(setSubmit(false))
+    dispatch(registerUser(data, true))
   }
 
+  const navigate = useNavigate()
+  const home = useSelector((state) => state.status.home)
+  useEffect(() => {
+    dispatch(setErrors(null))
+    if (home) navigate('/')
+  }, [home, dispatch, navigate])
+
+  const { submitActive } = useSelector((state) => state.status)
+  const submit = submitActive ? styles.submit : classNames(styles.submit, styles.disabledBtn)
+
   return (
-    <section className={classes.Sign_In}>
-      <form onSubmit={(e) => e.preventDefault()} className={classes.Sign_in_Form}>
-        <h2 className={classes.Form_Title}>Sign In</h2>
-        <div className={classes.Form_Item}>
-          <label className={classes.Label} htmlFor="email">
-            Email address
-          </label>
-          <input
-            className={classes.Input}
-            name="email"
-            {...register('email', {
-              required: 'email cannot be blank',
-              pattern: {
-                value: /^[^@ ]+@[^@ ]+\.[^@ .]{2,}$/,
-                message: 'email должен быть корректным почтовым адресом',
-              },
-            })}
-            placeholder="Email address"
-          />
-          {errors.email && <p>{errors.email.message}</p>}
-        </div>
-        <div className={classes.Form_Item}>
-          <label className={classes.Label} htmlFor="password">
-            Password
-          </label>
-          <input
-            className={classes.Input}
-            {...register('password', {
-              required: 'password cannot be blank',
-            })}
-            name="password"
-            placeholder="Password"
-            type="password"
-          />
-          {errors.password && <p>{errors.password.message}</p>}
-        </div>
-        <hr />
-        <button className={classes.Submit} type="submit" onClick={handleSubmit(onSubmit)}>
-          Login
+    <div className={styles.page}>
+      <form className={styles.form} onSubmit={handleSubmit(onSubmit)}>
+        <h1 className={styles.title}>Sign In</h1>
+
+        <ul className={styles.inputsList}>
+          <li className={styles.inputsItem}>
+            <label htmlFor="email" className={styles.label}>
+              Email address{' '}
+            </label>
+            <input
+              className={styles.input}
+              type="email"
+              id="email"
+              placeholder="Email address"
+              autoFocus
+              onKeyUp={() => {
+                setValue('email', watch('email').toLowerCase())
+              }}
+              style={errors.email && { outline: '1px solid #F5222D' }}
+              {...register('email', {
+                required: 'Email address can`t be empty',
+                pattern: {
+                  value: /^\S+@\S+\.\S+$/,
+                  message: 'Email address is not correct',
+                },
+              })}
+            />
+            {errors.email && <p className={styles.error}>{errors.email.message}</p>}
+          </li>
+          <li className={styles.inputsItem}>
+            <label htmlFor="password" className={styles.label}>
+              Password{' '}
+            </label>
+            <input
+              className={styles.input}
+              type="password"
+              id="password"
+              placeholder="Password"
+              style={errors.password && { outline: '1px solid #F5222D' }}
+              {...register('password', {
+                required: 'Password can`t be empty.',
+              })}
+            />
+            {errors.password && <p className={styles.error}>{errors.password.message}</p>}
+            {servErr && (
+              <p className={signUp.error}>{`${Object.entries(servErr)[0][0]} ${Object.entries(servErr)[0][1]}`}</p>
+            )}
+          </li>
+        </ul>
+
+        <button type="submit" className={submit} disabled={!submitActive}>
+          Sign In
         </button>
-        <p>
-          Don’t have an account?
-          <Link to="/sign-up">Sign Up.</Link>
-        </p>
+
+        <span className={styles.signInLabel}>
+          Don`t have an account?
+          <Link className={styles.signUp} to="/SignUp">
+            Sign Up.
+          </Link>
+        </span>
       </form>
-    </section>
+    </div>
   )
 }
 

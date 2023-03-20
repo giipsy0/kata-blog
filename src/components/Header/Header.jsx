@@ -1,45 +1,72 @@
-import React from 'react'
+import React, { useEffect } from 'react'
+import classNames from 'classnames'
+import { useDispatch, useSelector } from 'react-redux'
 import { Link } from 'react-router-dom'
 
-import { doLogout, useAuthDispatch, useAuthState } from '../../context/authContext'
-import classes from './Header.module.scss'
+import { logOut } from '../../store/slices/user-slice'
+import { getUser } from '../../services/blogService'
 
-const Header = () => {
-  const { user: loggedUser } = useAuthState()
-  const dispatch = useAuthDispatch()
-  const logOut = () => doLogout(dispatch)
+import styles from './Header.module.scss'
+
+const link = classNames(styles.link)
+const signUp = classNames(link, styles.signUp)
+const createArticle = classNames(link, styles['create-article'])
+const logOutBtn = classNames(link, styles['log-out'])
+
+function Header() {
+  const dispatch = useDispatch()
+  const { user } = useSelector((state) => state.user)
+  const { token } = user
+  const avatar = user.image ? user.image : 'https://static.productionready.io/images/smiley-cyrus.jpg'
+
+  const onLogOut = () => {
+    localStorage.removeItem('user')
+    dispatch(logOut())
+  }
+
+  useEffect(() => {
+    if (token) {
+      dispatch(getUser(token))
+    }
+  }, [])
+
+  const headerAuthorization = (
+    <ul className={styles.authorization}>
+      <li>
+        <Link className={link} to="/sign-in">
+          Sign In
+        </Link>
+      </li>
+      <li>
+        <Link className={signUp} to="/sign-up">
+          Sign Up
+        </Link>
+      </li>
+    </ul>
+  )
+
+  const headerMenu = (
+    <div className={styles.menu}>
+      <Link to="/new-article" className={createArticle}>
+        Create article
+      </Link>
+      <Link to="/profile" className={styles.user}>
+        <span className={styles.userName}>{user.username}</span>
+        <img className={styles.user__avatar} src={avatar} alt="avatar" />
+      </Link>
+      <Link to="/" className={logOutBtn} onClick={() => onLogOut()}>
+        Log Out
+      </Link>
+    </div>
+  )
 
   return (
-    <header className={classes.Header}>
-      <Link to="/" className={classes.Header_Title}>
+    <div className={styles.main}>
+      <Link to="/articles" className={styles.label}>
         Realworld Blog
       </Link>
-      {loggedUser ? (
-        <>
-          <button className={classes.Create_Article_Button} onClick={() => {}}>
-            <Link to="/new-article"> Create article</Link>
-          </button>
-          <Link to="/profile">
-            <div className={classes.User}>
-              <div className={classes.User_Name}>{loggedUser.username}</div>
-              <img className={classes.User_Avatar} src={loggedUser.image} alt={`${loggedUser.username}`} />
-            </div>
-          </Link>
-          <button className={classes.Logout_Button} onClick={() => logOut()}>
-            LogOut
-          </button>
-        </>
-      ) : (
-        <>
-          <button className={classes.Signin_Button} onClick={() => {}}>
-            <Link to="/sign-in">Sing In</Link>
-          </button>
-          <button className={classes.Signup_Button} onClick={() => {}}>
-            <Link to="/sign-up">Sing Up</Link>
-          </button>
-        </>
-      )}
-    </header>
+      {token ? headerMenu : headerAuthorization}
+    </div>
   )
 }
 

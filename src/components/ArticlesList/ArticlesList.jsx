@@ -1,116 +1,88 @@
-import { List } from 'antd'
-import { format } from 'date-fns'
-import PropTypes from 'prop-types'
-import React, { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import React, { useEffect } from 'react'
+import { Alert, Pagination, Spin } from 'antd'
+import { useDispatch, useSelector } from 'react-redux'
 
-import classes from './ArticlesList.module.scss'
+import { fetchArticles } from '../../services/blogService'
+import { setLimit, setPage } from '../../store/slices/articles-slice'
+import { setLocation, setStatus, goHome } from '../../store/slices/status-slice'
+import { SingleArticle } from '../Article/SingleArticle'
 
-const ArticlesList = ({ getArticles, favoriteArticle }) => {
-  const sendToFavorites = (slug, favorited) => {
-    if (favorited) {
-      favoriteArticle(slug, false).then(() => {
-        getArticles().then(({ articles, articlesCount }) => {
-          setArticlesData({ articles, articlesCount })
-        })
-      })
-    } else {
-      favoriteArticle(slug, true).then(() => {
-        getArticles().then(({ articles, articlesCount }) => {
-          setArticlesData({ articles, articlesCount })
-        })
-      })
+import styles from './ArticlesList.module.scss'
+
+function ArticlesList() {
+  const dispatch = useDispatch()
+  const { articles, articlesCount, page, limit } = useSelector((state) => state.articles)
+  const status = useSelector((state) => state.status.status)
+  const { token } = useSelector((state) => state.user.user)
+
+  useEffect(() => {
+    dispatch(goHome(false))
+    dispatch(setLocation('articles-list'))
+    dispatch(setStatus('loading'))
+    dispatch(fetchArticles(page, limit, token))
+  }, [page, limit, dispatch, token])
+
+  const articlez = articles.map((article) => (
+    <li key={article.slug}>
+      <SingleArticle article={article} />
+    </li>
+  ))
+
+  const showContent = (stat) => {
+    switch (stat) {
+      case 'loading':
+        return <Spin size="large" />
+      case '404':
+        return (
+          <Alert
+            message="По Вашему запросу ничего не найдено"
+            description="Попробуйте изменить запрос"
+            type="warning"
+            showIcon
+          />
+        )
+      case 'error':
+        return <Alert message="Ошибка сервера" description="Попробуйте перезагрузить страницу" type="error" showIcon />
+      case 'offline':
+        return (
+          <Alert
+            className={styles.error}
+            message="У вас нет интернет соединения!"
+            description="Пожалуйста проверьте ваш кабель"
+            type="error"
+            showIcon
+          />
+        )
+      default:
+        return articlez
     }
   }
-  const [articlesData, setArticlesData] = useState({})
-  let likeButton = useRef()
-  useEffect(() => {
-    getArticles().then(({ articles, articlesCount }) => {
-      setArticlesData({ articles, articlesCount })
-    })
-  }, [getArticles])
-  const likeIconClicked = (favorited) =>
-    favorited === true ? [classes.Likes_Button, classes.Liked].join(' ') : classes.Likes_Button
+
+  const content = showContent(status)
+
+  // eslint-disable-next-line no-shadow
+  const onPaginationChange = (page, limit) => {
+    dispatch(setPage(page))
+    dispatch(setLimit(limit))
+  }
+
   return (
-    <div className={classes.Articles}>
-      <List
-        className={classes.Articles_List}
-        itemLayout="vertical"
-        size="large"
-        pagination={{
-          onChange: (page) => {
-            getArticles(page * 5).then(({ articles, articlesCount }) => {
-              setArticlesData({ articles, articlesCount })
-            })
-          },
-          pageSize: 5,
-          total: articlesData.articlesCount,
-          showSizeChanger: false,
-          showTotal: false,
-          showQuickJumper: false,
-          showLessItems: true,
-          className: classes['ant-pagination'],
-        }}
-        dataSource={articlesData.articles}
-        renderItem={(item, index) => (
-          <List.Item key={index} className={classes.Articles_List_Item}>
-            <List.Item.Meta />
-            <div className={classes.Article}>
-              <header>
-                <Link className={classes.Article_Title} to={`articles/${item.slug}`}>
-                  {item.title}
-                </Link>
-                <div className={classes.Likes_Content}>
-                  <button
-                    ref={likeButton}
-                    className={likeIconClicked(item.favorited)}
-                    onClick={() => sendToFavorites(item.slug, item.favorited)}
-                  ></button>
-                  <span className={classes.Likes_Count}>{item.favoritesCount}</span>
-                </div>
-              </header>
-              <ul className={classes.Tag_List}>
-                {item.tagList &&
-                  item.tagList.map((tag, index) => (
-                    <li key={index} className={classes.Tag}>
-                      {tag}
-                    </li>
-                  ))}
-              </ul>
-              <div className={classes.Description}>{item.description}</div>
-              <div>
-                <div className={classes.Author}>
-                  {item.author && (
-                    <div className={classes.User}>
-                      <div className={classes.User_Name}>{item.author.username}</div>
-                      {item.createdAt && (
-                        <div className={classes.User_Created}>{format(new Date(item.createdAt), 'PPP')}</div>
-                      )}
-                      <img
-                        className={classes.User_Avatar}
-                        src={item.author.image}
-                        alt={`${item.author.username}`}
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </List.Item>
-        )}
-      />
+    <div className={styles.main}>
+      <ul className={styles.list}>{content}</ul>
+      {status !== 'error' && (
+        <Pagination
+          className={styles.pag}
+          hideOnSinglePage
+          current={page}
+          pageSize={limit}
+          pageSizeOptions={[5, 10, 20, 40, 100, 500]}
+          total={articlesCount}
+          /* eslint-disable-next-line no-shadow */
+          onChange={(page, pageSize) => onPaginationChange(page, pageSize)}
+        />
+      )}
     </div>
   )
-}
-
-ArticlesList.defaultProps = {
-  getArticles: () => {},
-  favoriteArticle: () => {},
-}
-
-ArticlesList.propTypes = {
-  getArticles: PropTypes.func.isRequired,
-  favoriteArticle: PropTypes.func.isRequired,
 }
 
 export default ArticlesList

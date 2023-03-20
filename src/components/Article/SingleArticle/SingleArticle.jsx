@@ -1,124 +1,142 @@
-import { format } from 'date-fns'
-import PropTypes from 'prop-types'
-import React, { useEffect, useRef, useState } from 'react'
-import Markdown from 'react-markdown'
-import { Link, Redirect, useRouteMatch } from 'react-router-dom'
+/* eslint-disable react/prop-types */
+import React, { useEffect, useState } from 'react'
+import ReactMarkdown from 'react-markdown'
+import { Spin } from 'antd'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useDispatch, useSelector } from 'react-redux'
+import { v4 as uuidv4 } from 'uuid'
+import classNames from 'classnames'
 
-import { useAuthState } from '../../../context/authContext'
-import classes from './SingleArticle.module.scss'
+import { deleteArticle, fetchArticle, fetchArticles, setLike } from '../../../services/blogService'
+import { setGoTo } from '../../../store/slices/status-slice'
 
-const SingleArticle = ({ getArticle, deleteArticle, favoriteArticle }) => {
-  let match = useRouteMatch()
+import styles from './SingleArticle.module.scss'
 
-  let likeButton = useRef()
-  const [articleData, setArticleData] = useState({})
-  const [deleteActive, setDelete] = useState(false)
-  const [ifDeleted, setIfDeleted] = useState(false)
+function SingleArticle({ article }) {
+  const navigate = useNavigate()
+  const dispatch = useDispatch()
+  const { slug } = useParams()
 
-  const { user: loggedUser } = useAuthState()
+  const { location } = useSelector((state) => state.status)
+  const { user } = useSelector((state) => state.user)
+  const { username, token } = user
+
+  const cardStyle = location === 'articles-list' ? styles.preview : classNames(styles.preview, styles.singleCard)
+
+  const [modal, setModal] = useState(false)
+  const [avatar, setAvatar] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const title = article.title.length < 1 ? 'NO TITLED ARTICLE' : article.title
+  const articlePath = `/articles/${article.slug}`
+  const { page, limit } = useSelector((state) => state.articles)
+
   useEffect(() => {
-    getArticle(match.url).then(({ article }) => {
-      setArticleData(article)
+    if (location === 'article-page') dispatch(setGoTo(''))
+  }, [])
+
+  useEffect(() => {
+    setAvatar(article.avatarPath)
+  }, [article.avatarPath])
+
+  const printTags = (post) =>
+    post.tags.map((tag) => {
+      const tagStr = String(tag)
+      if (tagStr.length > 20 || tagStr.length < 1) return null
+      return (
+        <li key={uuidv4()} className={styles.tag}>
+          {tagStr}
+        </li>
+      )
     })
-  }, [getArticle, match.url])
-  const sendToFavorites = (favorited) => {
-    if (favorited) {
-      favoriteArticle(match.params.slug, false).then((article) => {
-        setArticleData(article)
-      })
-    } else {
-      favoriteArticle(match.params.slug, true).then((article) => {
-        setArticleData(article)
-      })
+
+  const onLike = () => {
+    if (token) {
+      dispatch(setLike(token, article.slug, article.liked))
+      location === 'article-page'
+        ? dispatch(fetchArticle(article.slug, token))
+        : dispatch(fetchArticles(page, limit, token))
     }
   }
 
-  if (ifDeleted) return <Redirect to="/" />
-  const { title, favoritesCount, author, createdAt, tagList, description, body, favorited, slug } = articleData
   const onDelete = () => {
-
-    setDelete(!deleteActive)
+    dispatch(deleteArticle(token, slug))
+    navigate('/')
   }
+  const likeStyl = classNames(styles.blackLike, token && styles.activeLike, article.liked && styles.redLike)
 
-  const deleteConfirmed = (slug) => {
-    deleteArticle(slug)
-      .then(() => {
-        setIfDeleted(true)
-      })
-  }
+  const editLink = `/articles/${slug}/edit`
+  const deleteBtn = classNames(styles.btn, styles.delete)
+  const editBtn = classNames(styles.btn, styles.edit)
+  const yesBtn = classNames(styles.btn, styles.yes)
+  const noBtn = classNames(styles.btn, styles.no)
 
-  const deleteConfirm = (
-    <div className={classes.Delete_Confirm}>
-      <div className={classes.Delete_Warning}>
-        <i className={classes.Icon_Warning} />
-        <span>Are you sure to delete this article?</span>
-      </div>
-      <div className={classes.Delete_Buttons}>
-        <button onClick={() => onDelete()}>No</button>
-        <button onClick={() => deleteConfirmed(slug)}>Yes</button>
-      </div>
-    </div>
-  )
-
-  const likeIconClicked =
-    favorited === true ? [classes.Likes_Button, classes.Liked].join(' ') : classes.Likes_Button
   return (
-    <div className={classes.Single_Article}>
-      <header className={classes.Single_Article_Header}>
-        <h5 className={classes.Title}>{title}</h5>
-        <div className={classes.Likes_Content}>
-          <button ref={likeButton} className={likeIconClicked} onClick={() => sendToFavorites(favorited)}></button>
-          <span className={classes.Likes_Count}>{favoritesCount}</span>
-        </div>
-        <div className={classes.Author}>
-          {author && (
-            <div className={classes.User}>
-              <div className={classes.User_Name}>{author.username}</div>
-              {createdAt && <div className={classes.User_Created}>{format(new Date(createdAt), 'PPP')}</div>}
-              <img className={classes.User_Avatar} src={author.image} alt={`${author.username}`} />
+    <div className={styles.cardWrapper}>
+      <div className={cardStyle}>
+        <section className={styles.content}>
+          <div className={styles.titleWrapper}>
+            <Link to={articlePath} className={styles.title}>
+              {title}
+            </Link>
+            {/* eslint-disable-next-line react/button-has-type */}
+            <button onClick={() => onLike()} className={likeStyl}>
+              {article.likes}
+            </button>
+          </div>
+          <ul className={styles.tags}>{printTags(article)}</ul>
+          <p className={styles.description}>{article.description}</p>
+        </section>
+        <section className={styles.info}>
+          <div className={styles.authInfo}>
+            <div className={styles.infoWrapper}>
+              <span className={styles.author}>{article.username}</span>
+              <span className={styles.date}>{article.updatedDate}</span>
             </div>
+            {loading && <Spin style={{ position: 'absolute', right: '30px', top: '20px' }} />}
+            <img
+              alt="avatar"
+              src={avatar}
+              className={styles.avatar}
+              onLoad={() => {
+                setLoading(false)
+              }}
+              onError={() => setAvatar('/no-avatar.png')}
+            />
+          </div>
+          {location === 'article-page' && article.username === username && (
+            <ul className={styles.control}>
+              <li>
+                <button className={deleteBtn} type="button" onClick={() => setModal(true)}>
+                  Delete
+                </button>
+              </li>
+              <li>
+                <button type="button" className={editBtn} onClick={() => navigate(editLink)}>
+                  Edit
+                </button>
+              </li>
+            </ul>
           )}
-        </div>
-      </header>
-      <ul className={classes.Tag_List}>
-        {tagList &&
-          tagList.map((tag, index) => (
-            <li key={index} className={classes.Tag}>
-              {tag}
-            </li>
-          ))}
-      </ul>
-      <div className={classes.Article_Detail}>
-        <p className={classes.Description}>{description}</p>
-        {loggedUser && (
-          <>
-            <button className={classes.Delete_Button} onClick={onDelete}>
-              Delete
-            </button>
-            {deleteActive ? deleteConfirm : null}
-            <button className={classes.Edit_Button}>
-              <Link to={`${slug}/edit`}> Edit</Link>
-            </button>
-          </>
-        )}
+        </section>
       </div>
-      <section className={classes.Markdown}>
-        <Markdown>{body}</Markdown>
-      </section>
+      {/* eslint-disable-next-line react/no-children-prop */}
+      {location === 'article-page' && <ReactMarkdown children={article.text} className={styles.pageText} />}
+
+      {modal && (
+        <div className={styles.modal}>
+          <span className={styles.modalLabel}>Are you sure to delete this article?</span>
+          <div className={styles.modalBtns}>
+            <button type="button" className={noBtn} onClick={() => setModal(false)}>
+              No
+            </button>
+            <button type="button" className={yesBtn} onClick={() => onDelete()}>
+              Yes
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
 export default SingleArticle
-
-SingleArticle.defaultProps = {
-  deleteArticle: () => {},
-  getArticle: () => {},
-  favoriteArticle: () => {},
-}
-
-SingleArticle.propTypes = {
-  getArticle: PropTypes.func.isRequired,
-  deleteArticle: PropTypes.func.isRequired,
-  favoriteArticle: PropTypes.func.isRequired,
-}

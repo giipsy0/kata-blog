@@ -1,202 +1,212 @@
-class blogService {
-    constructor() {
-      this.apiBase = 'https://blog.kata.academy/api'
-    }
-  
-    getResources = async (resource, options = null) => {
-      const res = await fetch(`${this.apiBase}/${resource}`, options)
-      return await res.json()
-    }
-  
-    getArticles = async (offset = 0) => {
-      if (localStorage.getItem('token')) {
-        const res = this.getResources(`articles?limit=5&offset=${offset}`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-            Accept: 'application/json',
-            'Content-Type': 'application/json',
-          },
-        })
-        return res
-      }
-      const res = this.getResources(`articles?limit=5&offset=${offset}`)
-      return res
-    }
-  
-    getArticle = async (slug) => {
-      if (localStorage.getItem('token')) {
-        const res = this.getResources(`${slug}`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-            Accept: 'application/json',
-            'Content-Type': 'application/json',
-          },
-        })
-        return res
-      }
-  
-      const res = this.getResources(`${slug}`)
-      return res
-    }
-  
-    loginUser = async ({ email, password }) => {
-      const res = this.getResources('users/login', {
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-        },
-        method: 'POST',
-        body: JSON.stringify({
-          user: {
-            email: email,
-            password: password,
-          },
-        }),
+import axios from 'axios'
+import { format } from 'date-fns'
+
+import { addArticle, addArticles, addArticlesCount, setLiked } from '../store/slices/articles-slice'
+import { setStatus, goHome, setSubmit, setGoTo } from '../store/slices/status-slice'
+import { setErrors, setUser } from '../store/slices/user-slice'
+
+const baseUrl = 'https://blog.kata.academy/api'
+
+const getArticleItem = (article) => ({
+  slug: article.slug,
+  title: article.title,
+  likes: article.favoritesCount,
+  tags: article.tagList,
+  text: article.body,
+  liked: article.favorited,
+  description: article.description,
+  username: article.author.username,
+  updatedDate: format(new Date(article.updatedAt), 'MMMM d, yyyy'),
+  avatarPath: article.author.image,
+})
+
+const getArticleItems = (articles) => articles.map((article) => getArticleItem(article))
+
+const getHeaders = (token) => ({
+  Accept: 'application/json',
+  'Content-Type': 'application/json',
+  Authorization: `Bearer ${token}`,
+})
+
+export const fetchArticles =
+  (page, limit, token = '') =>
+  async (dispatch) =>
+    axios(`${baseUrl}/articles?&limit=${limit}&offset=${(page - 1) * limit}`, { headers: getHeaders(token) })
+      .then((res) => {
+        dispatch(addArticles(getArticleItems(res.data.articles)))
+        dispatch(addArticlesCount(res.data.articlesCount))
+        dispatch(setStatus('ok'))
       })
-      return res
-    }
-  
-    registerUser = async ({ email, password, username }) => {
-      const res = this.getResources('users', {
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-        },
-        method: 'POST',
-        body: JSON.stringify({
-          user: {
-            email: email,
-            password: password,
-            username: username,
-          },
-        }),
+      .catch((err) => {
+        switch (err.code) {
+          case 'ERR_BAD_REQUEST':
+            dispatch(setStatus('404'))
+            break
+          default:
+            dispatch(setStatus('error'))
+            break
+        }
       })
-      return res
-    }
-  
-    updateUser = async ({ email, password, username, image, token }) => {
-      const res = this.getResources('user', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-        },
-        method: 'PUT',
-        body: JSON.stringify({
-          user: {
-            email: email,
-            password: password,
-            username: username,
-            image: image,
-            token: token,
-          },
-        }),
-      })
-      return res
-    }
-  
-    getUser = async ({ token }) => {
-      const res = this.getResources('user', {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      return res
-    }
-  
-    createArticle = async ({ title, description, body, tags }) => {
-      await this.getResources('articles', {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-        },
-        method: 'POST',
-        body: JSON.stringify({
-          article: {
-            title: title,
-            description: description,
-            body: body,
-            tagList: tags,
-          },
-        }),
-      })
-        .then((response) => {
-          if (response.status >= 400 && response.status < 600) {
-            throw new Error('Bad response from server')
-          }
-          return response
-        })
-        .catch((error) => {
-          return error
-        })
-    }
-  
-    editArticle = async ({ title, description, body, tags }, slug) => {
-      await this.getResources(`articles/${slug}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-        },
-        method: 'PUT',
-        body: JSON.stringify({
-          article: {
-            title: title,
-            description: description,
-            body: body,
-            tagList: tags,
-          },
-        }),
-      })
-        .then((response) => {
-          if (response.status >= 400 && response.status < 600) {
-            throw new Error('Bad response from server')
-          }
-          return response
-        })
-        .catch((error) => {
-          return error
-        })
-    }
-  
-    deleteArticle = async (slug) => {
-      await this.getResources(`articles/${slug}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-        },
-        method: 'DELETE',
-      })
-        .then((response) => {
-          if (response.status >= 400 && response.status < 600) {
-            throw new Error('Bad response from server')
-          }
-          return response
-        })
-        .catch((error) => {
-          return error
-        })
-    }
-  
-    favoriteArticle = async (slug, liked) => {
-      return await this.getResources(`articles/${slug}/favorite`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-        },
-        method: `${liked ? 'POST' : 'DELETE'}`,
-      })
-        .then((response) => {
-          if (response.status >= 400 && response.status < 600) {
-            throw new Error('Bad response from server')
-          }
-          return response.article
-        })
-        .catch((error) => {
-          return error
-        })
-    }
+
+export const fetchArticle =
+  (slug, token = '') =>
+  async (dispatch) =>
+    axios(`${baseUrl}/articles/${slug}`, { headers: getHeaders(token) }).then((res) => {
+      dispatch(addArticle(getArticleItem(res.data.article)))
+      dispatch(setStatus('ok'))
+    })
+
+export const editArticle = (data, tags, token, slug) => async (dispatch) => {
+  const article = JSON.stringify({ article: { ...data, tagList: tags } })
+  return axios({
+    url: slug ? `${baseUrl}/articles/${slug}` : `${baseUrl}/articles`,
+    method: slug ? 'put' : 'post',
+    headers: getHeaders(token),
+    data: article,
+  })
+    .then((res) => {
+      dispatch(setStatus('ok'))
+      dispatch(setGoTo(res.data.article.slug))
+      dispatch(setSubmit(true))
+    })
+    .catch(() => {
+      dispatch(setSubmit(true))
+      dispatch(setStatus('error'))
+    })
 }
-  
-  export default blogService
+
+export const deleteArticle = (token, slug) => async (dispatch) =>
+  axios({
+    url: `${baseUrl}/articles/${slug}`,
+    method: 'delete',
+    headers: getHeaders(token),
+  })
+    .then((res) => res.data)
+    .then(() => {
+      dispatch(setStatus('ok'))
+      dispatch(goHome(true))
+      dispatch(setSubmit(true))
+    })
+    .catch(() => {
+      dispatch(setSubmit(true))
+      dispatch(setStatus('error'))
+    })
+
+export const setLike = (token, slug, liked) => async (dispatch) =>
+  axios({
+    url: `${baseUrl}/articles/${slug}/favorite`,
+    method: liked ? 'delete' : 'post',
+    headers: getHeaders(token),
+  })
+    .then((res) => {
+      dispatch(setStatus('ok'))
+      dispatch(setLiked(getArticleItem(res.data.article)))
+    })
+    .catch(() => {
+      dispatch(setSubmit(true))
+      dispatch(setStatus('error'))
+})
+
+const getHeader = (token) => ({
+  Accept: 'application/json',
+  'Content-Type': 'application/json',
+  Authorization: `Bearer ${token}`,
+})
+
+const fetchUser = axios.create({
+  baseURL: `${baseUrl}`,
+  method: 'post',
+  headers: {
+    Accept: 'application/json',
+    'Content-Type': 'application/json',
+  },
+})
+
+export const getUser = (token) => async (dispatch) => {
+  axios({
+    url: `${baseUrl}/user`,
+    headers: getHeader(token),
+  })
+    .then((res) => {
+      localStorage.setItem('user', JSON.stringify(res.data.user))
+      dispatch(setUser({ user: res.data.user }))
+      dispatch(setErrors(null))
+    })
+    .catch((err) => {
+      dispatch(setErrors(err.response.data.errors))
+    })
+}
+
+export const registerUser = (data, login) => async (dispatch) => {
+  const user = JSON.stringify({
+    user: data,
+  })
+
+  fetchUser({
+    url: login ? '/users/login' : '/users',
+    data: user,
+  })
+    .then((res) => {
+      localStorage.setItem('user', JSON.stringify(res.data.user))
+      dispatch(setUser({ user: res.data.user }))
+      dispatch(setErrors(null))
+      dispatch(goHome(true))
+      dispatch(setSubmit(true))
+    })
+    .catch((err) => {
+      if (err?.response?.status === 422) {
+        dispatch(setSubmit(true))
+        dispatch(setUser(JSON.parse(user)))
+        dispatch(setErrors(err.response.data.errors))
+      }
+    })
+}
+
+export const loginUser = (data) => async (dispatch) => {
+  const user = JSON.stringify({
+    user: data,
+  })
+  fetchUser({
+    url: '/users/login',
+    data: user,
+  })
+    .then((res) => {
+      localStorage.setItem('user', JSON.stringify(res.data.user))
+      dispatch(setUser({ user: res.data.user }))
+      dispatch(setErrors(null))
+      dispatch(goHome(true))
+      dispatch(setSubmit(true))
+    })
+    .catch((err) => {
+      dispatch(setSubmit(true))
+      if (err.response.status === 422) {
+        dispatch(setUser(JSON.parse(user)))
+        dispatch(setErrors(err.response.data.errors))
+      }
+    })
+}
+
+export const updateUser = (data) => async (dispatch) => {
+  const { token } = JSON.parse(localStorage.getItem('user'))
+
+  const user = JSON.stringify({
+    user: data,
+  })
+
+  axios({
+    url: `${baseUrl}/user`,
+    method: 'put',
+    headers: getHeader(token),
+    data: user,
+  })
+    .then((res) => {
+      localStorage.setItem('user', JSON.stringify(res.data.user))
+      dispatch(setUser({ user: res.data.user }))
+      dispatch(setErrors(null))
+      dispatch(setSubmit(true))
+    })
+    .catch((err) => {
+      dispatch(setSubmit(true))
+      dispatch(setErrors(err.response.data.errors))
+    })
+}

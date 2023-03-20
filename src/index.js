@@ -1,13 +1,17 @@
 import React from 'react'
-import ReactDOM from 'react-dom/client'
+import './index.scss'
+import { createRoot } from 'react-dom/client'
+import { Provider } from 'react-redux'
+import { BrowserRouter } from 'react-router-dom'
 
-import { AuthProvider } from '../src/context/authContext'
-import { App } from './components/App'
-import './index.css'
+import App from './components/App/App'
+import store from './store/store'
 
-const root = ReactDOM.createRoot(document.getElementById('root'))
+const root = createRoot(document.getElementById('root'))
 root.render(
-  <AuthProvider>
-    <App />
-  </AuthProvider>
+  <Provider store={store}>
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
+  </Provider>
 )

@@ -28,7 +28,9 @@
               "groups": ["builtin", "internal", "external", "parent", "sibling", "index"]
             }
         ],
-        "no-case-declarations": "off"
+        "no-case-declarations": "off",
+        "no-unused-vars": "off",
+        "no-undef": "off"
     },
     "settings": {
         "react": {

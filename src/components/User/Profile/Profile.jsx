@@ -1,96 +1,150 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { useForm } from 'react-hook-form'
-import { Redirect } from 'react-router-dom'
+import { useDispatch, useSelector } from 'react-redux'
+import classNames from 'classnames'
 
-import { updateProfile, useAuthDispatch, useAuthState } from '../../../context/authContext'
-import classes from './Profile.module.scss'
+import { updateUser } from '../../../services/blogService'
+import signUp from '../SignUp/SignUp.module.scss'
+import { setSubmit } from '../../../store/slices/status-slice'
+
+import styles from './Profile.module.scss'
 
 function Profile() {
   const {
     register,
-    handleSubmit,
     formState: { errors },
+    handleSubmit,
   } = useForm()
-  const { user: loggedUser } = useAuthState()
-  const dispatch = useAuthDispatch()
-  const [status, setStatus] = useState('idle')
-  if (status === 'success') return <Redirect to="/" />
 
-  const onSubmit = async (userData) => {
-    if (loggedUser.token) {
-      const { token } = loggedUser
-      updateProfile(dispatch, { ...userData, token }).then(() => setStatus('success'))
-    }
+  const { user } = useSelector((state) => state.user)
+  const dispatch = useDispatch()
+  const servErr = useSelector((state) => state.user.errors)
+
+  const onSubmit = (data) => {
+    dispatch(setSubmit(false))
+    dispatch(updateUser(data))
   }
+
+  const { submitActive } = useSelector((state) => state.status)
+  const submit = submitActive ? styles.submit : classNames(styles.submit, styles.disabledBtn)
+
   return (
-    <section className={classes.Profile}>
-      <form onSubmit={(e) => e.preventDefault()} className={classes.Profile_Form}>
-        <h2 className={classes.Form_Title}>Update profile</h2>
-        <div className={classes.Form_Item}>
-          <label className={classes.Label} htmlFor="name">
-            Username
-          </label>
-          <input
-            className={classes.Input}
-            placeholder="Username"
-            name="username"
-            {...register('username', {
-              required: true,
-              minLength: 3,
-              maxLength: 20,
-            })}
-          />
-        </div>
-        <div className={classes.Form_Item}>
-          <label className={classes.Label} htmlFor="email">
-            Email address
-          </label>
-          <input
-            className={classes.Input}
-            name="email"
-            {...register('email', {
-              required: 'email должен быть корректным почтовым адресом',
-              pattern: /^[^@ ]+@[^@ ]+\.[^@ .]{2,}$/,
-            })}
-            placeholder="Email address"
-          />
-        </div>
-        <div className={classes.Form_Item}>
-          <label className={classes.Label} htmlFor="password">
-            New password
-          </label>
-          <input
-            className={classes.Input}
-            {...register('password', {
-              required: 'You must specify a password',
-              minLength: {
-                value: 6,
-                message: 'Your password needs to be at least 6 characters.',
-              },
-              maxLength: {
-                value: 40,
-                message: 'Password must have less or equivalent to 40 characters',
-              },
-            })}
-            name="password"
-            placeholder="Password"
-            type="password"
-          />
-          {errors.password && <p>{errors.password.message}</p>}
-        </div>
-        <div className={classes.Form_Item}>
-          <label className={classes.Label} htmlFor="image">
-            Avatar image
-          </label>
-          <input className={classes.Input} name="image" {...register('image', {})} placeholder="Avatar image" />
-          {errors.image && <p>{errors.image.message}</p>}
-        </div>
-        <hr />
-        <button className={classes.Submit} type="submit" onClick={handleSubmit(onSubmit)}>
-          Update
+    <div className={styles.page}>
+      <form className={styles.form} onSubmit={handleSubmit(onSubmit)}>
+        <h1 className={styles.title}>Edit Profile</h1>
+
+        <ul className={styles.inputsList}>
+          <li>
+            <label htmlFor="name" className={styles.label}>
+              Username
+              <input
+                className={styles.input}
+                type="text"
+                id="name"
+                placeholder="Username"
+                defaultValue={user.username}
+                autoFocus
+                style={errors.username && { outline: '1px solid #F5222D' }}
+                {...register('username', {
+                  required: 'Your username can`t be empty.',
+                  minLength: {
+                    value: 3,
+                    message: 'Your username needs to be at least 3 characters.',
+                  },
+                  maxLength: {
+                    value: 20,
+                    message: 'Your username needs to be not more than 20 characters.',
+                  },
+                })}
+              />
+            </label>
+            {errors.username && <p className={styles.error}>{errors.username.message}</p>}
+            {servErr?.username && (
+              <p className={signUp.error}>
+                {user.username} {servErr?.username}
+              </p>
+            )}
+          </li>
+
+          <li>
+            <label htmlFor="email" className={styles.label}>
+              Email address
+              <input
+                className={styles.input}
+                type="email"
+                id="email"
+                placeholder="Email address"
+                defaultValue={user.email}
+                style={errors.email && { outline: '1px solid #F5222D' }}
+                {...register('email', {
+                  required: 'Your email address can`t be empty',
+                  pattern: {
+                    value: /^\S+@\S+\.\S+$/,
+                    message: 'Your email address is not correct',
+                  },
+                })}
+              />
+            </label>
+            {errors.email && <p className={styles.error}>{errors.email.message}</p>}
+            {servErr?.email && (
+              <p className={signUp.error}>
+                {user.email} {servErr?.email}
+              </p>
+            )}
+          </li>
+
+          <li>
+            <label htmlFor="password" className={styles.label}>
+              New password
+              <input
+                className={styles.input}
+                type="password"
+                id="password"
+                placeholder="New password"
+                style={errors.password && { outline: '1px solid #F5222D' }}
+                {...register('password', {
+                  minLength: {
+                    value: 6,
+                    message: 'Your password needs to be at least 6 characters.',
+                  },
+                  maxLength: {
+                    value: 40,
+                    message: 'Your password needs to be not more than 40 characters.',
+                  },
+                })}
+              />
+            </label>
+            {errors.password && <p className={styles.error}>{errors.password.message}</p>}
+          </li>
+
+          <li>
+            <label htmlFor="avatar" className={styles.label}>
+              Avatar image (url)
+              <input
+                className={styles.input}
+                type="text"
+                id="avatar"
+                placeholder="Avatar image"
+                defaultValue={user.image}
+                style={errors.image && { outline: '1px solid #F5222D' }}
+                {...register('image', {
+                  pattern: {
+                    value:
+                      /^(?:(?:(?:https?|ftp):)?\/\/)(?:\S+(?::\S*)?@)?(?:(?!(?:10|127)(?:\.\d{1,3}){3})(?!(?:169\.254|192\.168)(?:\.\d{1,3}){2})(?!172\.(?:1[6-9]|2\d|3[0-1])(?:\.\d{1,3}){2})(?:[1-9]\d?|1\d\d|2[01]\d|22[0-3])(?:\.(?:1?\d{1,2}|2[0-4]\d|25[0-5])){2}(?:\.(?:[1-9]\d?|1\d\d|2[0-4]\d|25[0-4]))|(?:(?:[a-z0-9\u00a1-\uffff][a-z0-9\u00a1-\uffff_-]{0,62})?[a-z0-9\u00a1-\uffff]\.)+(?:[a-z\u00a1-\uffff]{2,}\.?))(?::\d{2,5})?(?:[/?#]\S*)?$/i,
+                    message: 'Your url link is not correct',
+                  },
+                })}
+              />
+            </label>
+            {errors.image && <p className={styles.error}>{errors.image.message}</p>}
+          </li>
+        </ul>
+
+        <button type="submit" className={submit} disabled={!submitActive}>
+          Save
         </button>
       </form>
-    </section>
+    </div>
   )
 }
 

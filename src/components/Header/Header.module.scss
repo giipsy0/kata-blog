@@ -1,112 +1,108 @@
-.Header {
-    height: 80px;
+.main {
+    border: 1px transparent solid;
     display: flex;
-    justify-content: center;
+    justify-content: space-between;
     align-items: center;
-    padding: 0 22px;
-    box-sizing: border-box;
+    background-color: #fff;
+    width: auto;
+    height: 80px;
+    font-family: 'Inter', sans-serif;
+}
+  
+.label {
+    text-decoration: none;
     color: rgba(0, 0, 0, 0.85);
-    background-color: #ffffff;
-    gap: 20px
-}
-
-.Header_Title {
-    margin-right: auto;
+    margin-left: 22px;
     font-weight: 400;
     font-size: 18px;
     line-height: 28px;
-    text-decoration: none;
-    color: rgba(0, 0, 0, 0.75);
 }
-
-.Signin_Button {
-    font-family: 'Inter';
-    font-style: normal;
-    font-weight: 400;
-    font-size: 18px;
-    line-height: 28px;
-    color: rgba(0, 0, 0, 0.85);
-    border: 1px solid transparent;
-    cursor: pointer;
-    background: none;
-}
-
-.Signup_Button {
-    border: none;
-    background: none;
-}
-
-.Signup_Button a {
-    font-family: 'Inter';
-    font-style: normal;
-    font-weight: 400;
-    font-size: 18px;
-    line-height: 28px;
-    color: #52C41A;
-    border-radius: 5px;
-    border: 1px solid #52C41A;
-    background-color: #ffffff;
-    outline: none;
-    padding: 10px 18px;
-    text-decoration: none;
-}
-
-.Create_Article_Button {
-    border: none;
-    background: none;
-}
-
-.Create_Article_Button a {
-    font-family: "Inter";
-    font-style: normal;
-    font-weight: 400;
-    font-size: 18px;
-    line-height: 28px;
-    color: #52c41a;
-    border-radius: 5px;
-    border: 1px solid #52c41a;
-    background-color: #ffffff;
-    outline: none;
-    padding: 4px 8px;
-    text-decoration: none;
-}
-
-.Logout_Button{
-    border: 1px solid rgba(0, 0, 0, 0.75);
-    color: rgba(0, 0, 0, 0.75);
-    background-color: #ffffff;
-    outline: none;
-    padding: 10px 18px;
-    text-decoration: none;
-    border-radius: 5px;
-    cursor: pointer;
-}
-
-.User {
+  
+.authorization {
+    list-style: none;
+    padding: 0;
     display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    justify-content: center;
-    min-height: 46px;
-    position: relative;
+    flex-direction: row;
+    gap: 19px;
 }
-
-a:hover .User_Name {
+  
+.link {
     text-decoration: none;
-}
-
-.User_Name {
+    color: rgba(0, 0, 0, 0.85);
     font-size: 18px;
     line-height: 28px;
+    padding: 12px 18px;
+    border-radius: 5px;
+    border: 1px transparent solid;
+  
+    &:hover {
+      border: 1px #1890ff solid;
+      color: #1890ff;
+      transition: border 0.5s;
+    }
+}
+  
+.signUp {
+    color: #52c41a;
+    border: 1px #52c41a solid;
+    margin-right: 22px;
+  
+    &:hover {
+      background-color: #52c41a;
+      color: #fff;
+      border: 1px #52c41a solid;
+      transition: 0.5s;
+    }
+}
+  
+.menu {
+    display: flex;
+    align-items: center;
+    gap: 27px;
+}
+  
+.user {
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 13px;
     color: rgba(0, 0, 0, 0.85);
-    margin-right: 58px;
+}
+  
+.userName {
+    font-weight: 400;
+    font-size: 18px;
+    line-height: 28px;
+}
+  
+.user__avatar {
+    height: 46px;
+    width: 46px;
 }
 
-.User_Avatar {
-    position: absolute;
-    right: 0;
-    top: 0;
-    width: 46px;
-    height: 46px;
-    border-radius: 25px;
+.create-article {
+    font-size: 14px;
+    line-height: 22px;
+    color: #52c41a;
+    padding: 6px 10px;
+    border: 1px #52c41a solid;
+    border-radius: 5px;
+    &:hover {
+      background-color: #52c41a;
+      color: #fff;
+      border: 1px #52c41a solid;
+      transition: 0.5s;
+    }
+}
+  
+.log-out {
+    color: rgba(0, 0, 0, 0.75);
+    border: 1px rgba(0, 0, 0, 0.75) solid;
+    margin-right: 22px;
+    &:hover {
+      border: 1px rgba(0, 0, 0, 0.75) solid;
+      background-color: rgba(0, 0, 0, 0.75);
+      color: #fff;
+      transition: 0.5s;
+    }
 }
